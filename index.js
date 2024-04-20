@@ -302,6 +302,31 @@ app.delete("/posts/:id", async (req, res) => {
   }
 });
 
+app.post("/posts/:id/comments", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { content } = req.body;
+    try {
+      const newComment = await prisma.comment.create({
+        data: {
+          content,
+          user_id: req.user.id,
+          post_id: parseInt(id),
+          created_at: new Date(),
+        },
+      });
+
+      res.json(newComment);
+    } catch (error) {
+      console.log(error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
 // Start server
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
