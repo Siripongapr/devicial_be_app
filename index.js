@@ -99,13 +99,156 @@ function authenticateToken(req, res, next) {
   });
 }
 
-app.get("/info", authenticateToken, (req, res) => {
+app.use(authenticateToken);
+
+app.get("/info", (req, res) => {
   res.json(req.user);
 });
 
 app.get("/logout", (req, res) => {
   res.clearCookie("token");
   res.json({ message: "Logged out" });
+});
+
+app.post("/create-post", async (req, res) => {
+  const { title, contents } = req.body;
+  try {
+    const post = await prisma.post.create({
+      data: {
+        title,
+        user_id: req.user.id,
+        date: new Date(),
+      },
+    });
+
+    //TODO - find a better way to update contents
+
+    const contentsArray = req.body.contents;
+    const contents = contentsArray.map((content) => ({
+      ...content,
+      post_id: post.id,
+    }));
+
+    await Promise.all(
+      contents.map(async (content) => {
+        await prisma.content.create({
+          data: content,
+        });
+      })
+    );
+
+    const postWithContents = await prisma.post.findUnique({
+      where: {
+        id: post.id,
+      },
+      include: {
+        contents: true,
+      },
+    });
+
+    res.json(postWithContents);
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+app.get("/posts", async (req, res) => {
+  const posts = await prisma.post.findMany({
+    include: {
+      user: true,
+      contents: true,
+      comments: true,
+      likes: true,
+      views: true,
+    },
+  });
+
+  res.json(posts);
+});
+
+app.get("/posts/:id", async (req, res) => {
+  const { id } = req.params;
+  const post = await prisma.post.findUnique({
+    where: {
+      id: parseInt(id),
+    },
+    include: {
+      user: true,
+      contents: true,
+      comments: true,
+      likes: true,
+      views: true,
+    },
+  });
+
+  if (!post) {
+    res.status(404).json({ error: "Post not found" });
+    return;
+  }
+
+  //TODO - Increment views
+
+  // const views = await prisma.postView.create({
+  //   data: {
+  //     post_id: parseInt(id),
+  //     user_id: req.user.id,
+  //     created_at: new Date(),
+  //   },
+  // });
+
+  res.json(post);
+});
+
+app.put("/posts/:id", async (req, res) => {
+  const { id } = req.params;
+  const { title } = req.body;
+  try {
+    const post = await prisma.post.update({
+      where: {
+        id: parseInt(id),
+      },
+      data: {
+        title,
+      },
+    });
+
+    const contentsArray = req.body.contents;
+    const contents = contentsArray.map((content) => ({
+      ...content,
+      post_id: post.id,
+    }));
+
+    await prisma.content.deleteMany({
+      where: {
+        post_id: parseInt(id),
+      },
+    });
+
+    //TODO - find a better way to update contents
+
+    await Promise.all(
+      contents.map(async (content) => {
+        await prisma.content.create({
+          data: content,
+        });
+      })
+    );
+
+    const postWithContents = await prisma.post.findUnique({
+      where: {
+        id: post.id,
+      },
+      include: {
+        contents: true,
+      },
+    });
+
+    res.json(postWithContents);
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({ error: "Internal server error" });
+  }
 });
 
 // Start server
