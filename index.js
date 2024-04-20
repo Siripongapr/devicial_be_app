@@ -169,13 +169,15 @@ app.get("/posts", async (req, res) => {
 
 app.get("/posts/:id", async (req, res) => {
   const { id } = req.params;
-  const view = await prisma.postView.create({
+
+  await prisma.postView.create({
     data: {
       post: { connect: { id: parseInt(id) } },
       viewer: { connect: { id: req.user.id } },
       created_at: new Date(),
     },
   });
+
   const post = await prisma.post.findUnique({
     where: {
       id: parseInt(id),
@@ -193,16 +195,6 @@ app.get("/posts/:id", async (req, res) => {
     res.status(404).json({ error: "Post not found" });
     return;
   }
-
-  // TODO - Increment views
-
-  // const views = await prisma.postView.create({
-  //   data: {
-  //     post_id: parseInt(id),
-  //     user_id: req.user.id,
-  //     created_at: new Date(),
-  //   },
-  // });
 
   res.json(post);
 });
@@ -252,6 +244,51 @@ app.put("/posts/:id", async (req, res) => {
     });
 
     res.json(postWithContents);
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+app.delete("/posts/:id", async (req, res) => {
+  const { id } = req.params;
+  try {
+    // Delete related contents first
+    await prisma.content.deleteMany({
+      where: {
+        post_id: parseInt(id),
+      },
+    });
+
+    // Delete related comments
+    await prisma.comment.deleteMany({
+      where: {
+        post_id: parseInt(id),
+      },
+    });
+
+    // Delete related likes
+    await prisma.postLike.deleteMany({
+      where: {
+        post_id: parseInt(id),
+      },
+    });
+
+    // Delete related views
+    await prisma.postView.deleteMany({
+      where: {
+        post_id: parseInt(id),
+      },
+    });
+
+    // Finally, delete the post
+    await prisma.post.delete({
+      where: {
+        id: parseInt(id),
+      },
+    });
+
+    res.json({ message: "Post deleted" });
   } catch (error) {
     console.log(error);
     res.status(500).json({ error: "Internal server error" });
