@@ -168,35 +168,42 @@ app.get("/posts", async (req, res) => {
 });
 
 app.get("/posts/:id", async (req, res) => {
-  const { id } = req.params;
+  try {
+    const { id } = req.params;
 
-  await prisma.postView.create({
-    data: {
-      post: { connect: { id: parseInt(id) } },
-      viewer: { connect: { id: req.user.id } },
-      created_at: new Date(),
-    },
-  });
+    const post = await prisma.post.findUnique({
+      where: {
+        id: parseInt(id),
+      },
+      include: {
+        user: true,
+        contents: true,
+        comments: true,
+        likes: true,
+        views: true,
+      },
+    });
 
-  const post = await prisma.post.findUnique({
-    where: {
-      id: parseInt(id),
-    },
-    include: {
-      user: true,
-      contents: true,
-      comments: true,
-      likes: true,
-      views: true,
-    },
-  });
+    if (!post) {
+      res.status(404).json({ error: "Post not found" });
+      return;
+    }
 
-  if (!post) {
-    res.status(404).json({ error: "Post not found" });
-    return;
+    const view = await prisma.postView.create({
+      data: {
+        post: { connect: { id: parseInt(id) } },
+        viewer: { connect: { id: req.user.id } },
+        created_at: new Date(),
+      },
+    });
+
+    post.views.push(view);
+
+    res.json(post);
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({ error: "Internal server error" });
   }
-
-  res.json(post);
 });
 
 app.put("/posts/:id", async (req, res) => {
