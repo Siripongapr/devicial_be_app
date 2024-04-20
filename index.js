@@ -343,6 +343,38 @@ app.post("/posts/:id/comments", async (req, res) => {
   }
 });
 
+app.delete("/comments/:commentId", async (req, res) => {
+  const { commentId } = req.params;
+  try {
+    const comment = await prisma.comment.findUnique({
+      where: {
+        id: parseInt(commentId),
+      },
+    });
+
+    if (!comment) {
+      res.status(404).json({ error: "Comment not found" });
+      return;
+    }
+
+    if (comment.user_id !== req.user.id) {
+      res.status(403).json({ error: "Forbidden" });
+      return;
+    }
+
+    await prisma.comment.delete({
+      where: {
+        id: parseInt(commentId),
+      },
+    });
+
+    res.json({ message: "Comment deleted" });
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
 app.post("/posts/:id/likes", async (req, res) => {
   const { id } = req.params;
   try {
