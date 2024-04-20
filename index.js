@@ -260,6 +260,22 @@ app.put("/posts/:id", async (req, res) => {
 app.delete("/posts/:id", async (req, res) => {
   const { id } = req.params;
   try {
+    const post = await prisma.post.findUnique({
+      where: {
+        id: parseInt(id),
+      },
+    });
+
+    if (!post) {
+      res.status(404).json({ error: "Post not found" });
+      return;
+    }
+
+    if (post.user_id !== req.user.id) {
+      res.status(403).json({ error: "Forbidden" });
+      return;
+    }
+
     // Delete related contents first
     await prisma.content.deleteMany({
       where: {
