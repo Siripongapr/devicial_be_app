@@ -10,6 +10,10 @@ const JWT_SECRET = process.env.JWT || "your_jwt";
 
 // Middleware
 app.use(express.json());
+app.use(async (req, res, next) => {
+  console.log(req.method, req.url);
+  next();
+});
 
 // Routes
 app.get("/", async (req, res) => {
