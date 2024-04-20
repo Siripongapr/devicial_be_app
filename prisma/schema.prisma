@@ -1,0 +1,86 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id         Int      @id @default(autoincrement())
+  username   String
+  password   String
+  email      String
+  gender     String
+  birth_date DateTime
+  posts      Post[]
+  comments   Comment[]
+  following  Follow[] @relation("FollowingRelation")
+  followers  Follow[] @relation("FollowerRelation")
+  likes      PostLike[]
+  views      PostView[]
+}
+
+model Post {
+  id        Int       @id @default(autoincrement())
+  user      User      @relation(fields: [user_id], references: [id])
+  user_id   Int
+  title     String
+  date      DateTime
+  contents  Content[]
+  comments  Comment[]
+  likes     PostLike[]
+  views     PostView[]
+}
+
+model Content {
+  id       Int     @id @default(autoincrement())
+  post     Post    @relation(fields: [post_id], references: [id])
+  post_id  Int
+  type     String
+  content  String
+}
+
+model Comment {
+  id         Int      @id @default(autoincrement())
+  user       User     @relation(fields: [user_id], references: [id])
+  user_id    Int
+  post       Post     @relation(fields: [post_id], references: [id])
+  post_id    Int
+  content    String
+  created_at DateTime
+}
+
+model PostLike {
+  id         Int      @id @default(autoincrement())
+  user       User     @relation(fields: [user_id], references: [id])
+  user_id    Int
+  post       Post     @relation(fields: [post_id], references: [id])
+  post_id    Int
+  created_at DateTime
+}
+
+model PostView {
+  id         Int      @id @default(autoincrement())
+  post       Post     @relation(fields: [post_id], references: [id])
+  post_id    Int
+  viewer     User     @relation(fields: [viewer_id], references: [id])
+  viewer_id  Int
+  created_at DateTime
+}
+
+model Follow {
+  follower   User @relation("FollowerRelation", fields: [follower_id], references: [id])
+  follower_id Int
+  following  User @relation("FollowingRelation", fields: [following_id], references: [id])
+  following_id Int
+
+  @@id([follower_id, following_id])
+}
