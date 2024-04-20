@@ -169,6 +169,13 @@ app.get("/posts", async (req, res) => {
 
 app.get("/posts/:id", async (req, res) => {
   const { id } = req.params;
+  const view = await prisma.postView.create({
+    data: {
+      post: { connect: { id: parseInt(id) } },
+      viewer: { connect: { id: req.user.id } },
+      created_at: new Date(),
+    },
+  });
   const post = await prisma.post.findUnique({
     where: {
       id: parseInt(id),
@@ -187,7 +194,7 @@ app.get("/posts/:id", async (req, res) => {
     return;
   }
 
-  //TODO - Increment views
+  // TODO - Increment views
 
   // const views = await prisma.postView.create({
   //   data: {
