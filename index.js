@@ -99,8 +99,13 @@ function authenticateToken(req, res, next) {
   });
 }
 
-app.get("/dashboard", authenticateToken, (req, res) => {
+app.get("/info", authenticateToken, (req, res) => {
   res.json(req.user);
+});
+
+app.get("/logout", (req, res) => {
+  res.clearCookie("token");
+  res.json({ message: "Logged out" });
 });
 
 // Start server
