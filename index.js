@@ -327,6 +327,42 @@ app.post("/posts/:id/comments", async (req, res) => {
   }
 });
 
+app.post("/posts/:id/likes", async (req, res) => {
+  const { id } = req.params;
+  try {
+    const existingLike = await prisma.postLike.findFirst({
+      where: {
+        post_id: parseInt(id),
+        user_id: req.user.id,
+      },
+    });
+
+    if (existingLike) {
+      await prisma.postLike.delete({
+        where: {
+          id: existingLike.id,
+        },
+      });
+
+      res.json({ message: "Post unliked" });
+      return;
+    }
+
+    const postLike = await prisma.postLike.create({
+      data: {
+        post_id: parseInt(id),
+        user_id: req.user.id,
+        created_at: new Date(),
+      },
+    });
+
+    res.json(postLike);
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
 // Start server
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
